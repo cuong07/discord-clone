@@ -35,6 +35,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useModal } from "@/hooks/use-modal-store";
 import { ChanelType } from "@prisma/client";
 import { useEffect } from "react";
+import { channel } from "diagnostics_channel";
 
 const schema = z.object({
   name: z
@@ -48,42 +49,43 @@ const schema = z.object({
   type: z.nativeEnum(ChanelType),
 });
 
-export const CreateChannelModal = () => {
+export const EditChannelModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const router = useRouter();
   const params = useParams();
 
-  const isModalOpen = isOpen && type === "createChannel";
-  const { channelType } = data;
+  const isModalOpen = isOpen && type === "editChannel";
+
+  const { channel, server } = data;
 
   const form = useForm({
     defaultValues: {
       name: "",
-      type: channelType || ChanelType.TEXT,
+      type: channel?.type || ChanelType.TEXT,
     },
     resolver: zodResolver(schema),
   });
 
   useEffect(() => {
-    if (channelType) {
-      form.setValue("type", channelType);
-    } else {
-      form.setValue("type", ChanelType.TEXT);
+    if (channel) {
+      form.setValue("name", channel.name);
+      form.setValue("type", channel?.type);
     }
-  }, [channelType, form]);
+  }, [channel, form]);
 
   const isLoading = form.formState.isSubmitting;
 
   const onSubmit = async (values: z.infer<typeof schema>) => {
     try {
+      console.log(values);
       const url = qs.stringifyUrl({
-        url: "/api/channels",
+        url: `/api/channels/${channel?.id}`,
         query: {
-          serverId: params?.serverId,
+          serverId: server?.id,
         },
       });
 
-      await axios.post(url, values);
+      await axios.patch(url, values);
       form.reset();
       router.refresh();
     } catch (error) {
